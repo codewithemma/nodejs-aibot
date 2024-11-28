@@ -1,12 +1,18 @@
-require("dotenv");
+require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
 const app = express();
 
-const providersRouter = require("./routes/providers");
+// routes
+const authRoute = require("./routes/auth");
+const serviceRouter = require("./routes/services");
+
+// connect db
 const connectDB = require("./db/connect");
 
 const port = 3000;
+
+app.use(express.json());
 
 // middlewares
 app.get("/", (req, res) => {
@@ -15,13 +21,18 @@ app.get("/", (req, res) => {
 
 app.use(
   session({
-    secret: "1eef7c7c138cd7ef9f190677e73e9492b2226de1f4a96c156d8403d5a6da2752",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 1 day expiration
+      secure: false, // Ensure cookies are only sent over HTTPS in production
+    },
   })
 );
 
-app.use("/api/v1", providersRouter);
+app.use("/api/v1/auth", authRoute);
+app.use("/api/v1/dashboard", serviceRouter);
 
 const start = async () => {
   try {

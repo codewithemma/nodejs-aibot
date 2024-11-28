@@ -13,12 +13,12 @@ const SCOPES = [
 ];
 
 const oauth2Client = new google.auth.OAuth2(
-  "1064744088219-aple5jj2lim0ih1af35t331t8vknmt1q.apps.googleusercontent.com",
-  "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",
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
   "http://localhost:3000/api/v1/auth/callback"
 );
 
-const oAuthHandler = async (req, res) => {
+const signInGoogle = async (req, res) => {
   const state = await crypto.randomBytes(32).toString("hex");
   req.session.state = state;
   const authorizationUrl = oauth2Client.generateAuthUrl({
@@ -59,12 +59,15 @@ const callBack = async (req, res) => {
           name,
           email,
           picture,
-          refreshToken: tokens.refresh_token || null, // Save refresh token if available
+          refreshToken: tokens.refresh_token || null,
         });
         await user.save();
       }
       // Store user ID in session
       req.session.userId = user._id;
+      // req.session.oauth2Client = oauth2Client;
+      // console.log(req.session, "req.session");
+      // console.log(req.session.userId);
       res.send(`Welcome, ${name}`);
     }
   } catch (error) {
@@ -73,4 +76,4 @@ const callBack = async (req, res) => {
   }
 };
 
-module.exports = { oAuthHandler, callBack };
+module.exports = { signInGoogle, callBack };
