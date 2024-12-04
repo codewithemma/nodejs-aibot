@@ -15,7 +15,7 @@ export default function ScreenRecorder() {
         audio: true, // Include system/tab audio
       });
 
-      // Capture microphone audio with echo cancellation
+      // Capture microphone audio
       const micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -24,17 +24,32 @@ export default function ScreenRecorder() {
         },
       });
 
-      // Combine the screen and microphone audio streams
+      // Create an AudioContext for mixing
+      const audioContext = new AudioContext();
+
+      // Create sources for tab audio and mic audio
+      const tabAudioSource =
+        audioContext.createMediaStreamSource(displayStream);
+      const micAudioSource = audioContext.createMediaStreamSource(micStream);
+
+      // Create a destination for the mixed audio
+      const destination = audioContext.createMediaStreamDestination();
+
+      // Connect both sources to the destination
+      tabAudioSource.connect(destination);
+      micAudioSource.connect(destination);
+
+      // Combine the video track from displayStream and the mixed audio
       const combinedStream = new MediaStream([
-        ...displayStream.getTracks(),
-        ...micStream.getAudioTracks(),
+        ...displayStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks(),
       ]);
 
       // Save the combined stream for later use
       streamRef.current = combinedStream;
 
       // MediaRecorder setup
-      const options = { mimeType: "video/webm; codecs=vp9,opus" }; // Use WebM for browser support
+      const options = { mimeType: "video/webm; codecs=vp8,opus" };
       const mediaRecorder = new MediaRecorder(combinedStream, options);
       mediaRecorderRef.current = mediaRecorder;
 
@@ -50,6 +65,7 @@ export default function ScreenRecorder() {
 
         // Stop all tracks to release resources
         combinedStream.getTracks().forEach((track) => track.stop());
+        audioContext.close(); // Close the AudioContext
       };
 
       mediaRecorder.start();
